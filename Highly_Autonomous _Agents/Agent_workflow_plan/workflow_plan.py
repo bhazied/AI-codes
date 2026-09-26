@@ -163,6 +163,7 @@ class AISuiteEmailAgent:
 
 if __name__ == "__main__":
     # You can swap 'openai:gpt-4o' with 'anthropic:claude-3-5-sonnet' or 'groq:llama-3.3-70b'
+    #also you can use 'openai:gpt-4o-mini' for a smaller model variant.
     agent = AISuiteEmailAgent(model_provider="openai:gpt-4o")
 
     prompt = (

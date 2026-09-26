@@ -1,10 +1,10 @@
 import io
 import sys
 from typing import Any, Dict, List
-from openai import OpenAI
+import aisuite as ai
 
 # ==========================================
-# 1. Vos Fonctions d'E-mails (Native Tools)
+# 1. Email Tools (Native Functions)
 # ==========================================
 
 def search_mail(query: str) -> List[str]:
@@ -33,7 +33,7 @@ def delete_mail(mail_id: str) -> str:
     return f"E-mail {mail_id} supprimé."
 
 # ==========================================
-# 2. Agent Code Execution
+# 2. Agent Code Execution with AISuite
 # ==========================================
 
 SYSTEM_PROMPT = """
@@ -48,16 +48,18 @@ Les fonctions suivantes sont DÉJÀ importées et disponibles directement dans t
 - delete_mail(mail_id: str) -> str
 
 Règles :
-1. Génère uniquement un bloc de code Python executable.
+1. Génère uniquement un bloc de code Python exécutable sans explications additionnelles.
 2. Utilise les fonctions listées ci-dessus.
 3. Utilise print() pour afficher le résultat final.
 """
 
-class CodeGeneratingEmailAgent:
-    def __init__(self):
-        self.client = OpenAI()
+class AISuiteCodeGeneratingAgent:
+    def __init__(self, model_provider: str = "openai:gpt-4o-mini"):
+        # Initialize AISuite client
+        self.client = ai.Client()
+        self.model_provider = model_provider
         
-        # Contexte d'exécution natif contenant les fonctions d'e-mails
+        # Execution environment pre-loaded with local email tools
         self.execution_environment = {
             "search_mail": search_mail,
             "read_mail": read_mail,
@@ -69,9 +71,9 @@ class CodeGeneratingEmailAgent:
     def run(self, user_prompt: str):
         print(f"Demande Utilisateur : \"{user_prompt}\"\n")
 
-        # 1. Génération du code Python via OpenAI LLM
+        # 1. Code generation via AISuite interface
         response = self.client.chat.completions.create(
-            model="gpt-4o",
+            model=self.model_provider,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": user_prompt}
@@ -81,23 +83,22 @@ class CodeGeneratingEmailAgent:
 
         generated_code = response.choices[0].message.content
 
-        # Nettoyage des balises Markdown (```python ... ```) si présentes
+        # Strip Markdown code blocks
         if "```python" in generated_code:
             generated_code = generated_code.split("```python")[1].split("```")[0].strip()
         elif "```" in generated_code:
             generated_code = generated_code.split("```")[1].split("```")[0].strip()
 
-        print("--- Code Python Généré par le LLM ---")
+        print("--- Code Python Généré via AISuite ---")
         print(generated_code)
-        print("-------------------------------------\n")
+        print("--------------------------------------\n")
 
-        # 2. Exécution du code dans l'environnement contenant les outils
+        # 2. Dynamic execution within the tool environment
         print("--- Exécution du Code ---")
         buffer = io.StringIO()
         sys.stdout = buffer
 
         try:
-            # Execution native du code généré avec accès aux 5 fonctions
             exec(generated_code, self.execution_environment)
             sys.stdout = sys.__stdout__
             print("Résultat de l'exécution (stdout) :")
@@ -107,11 +108,12 @@ class CodeGeneratingEmailAgent:
             print(f"Erreur d'exécution : {e}")
 
 # ==========================================
-# 3. Lancement
+# 3. Execution
 # ==========================================
 
 if __name__ == "__main__":
-    agent = CodeGeneratingEmailAgent()
+    # Uses gpt-4o-mini via AISuite
+    agent = AISuiteCodeGeneratingAgent(model_provider="openai:gpt-4o-mini")
 
     prompt = (
         "Cherche les e-mails sur le 'budget', lis le premier e-mail trouvé (mail_101), "
